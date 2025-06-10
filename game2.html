@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ダンジョン学習RPG（算数）</title>
+  <style>
+    body { font-family: sans-serif; background: #222; color: #fff; text-align: center; }
+    #battle, #map { margin-top: 30px; }
+    .entity { margin: 10px 0; font-size: 1.2rem; }
+    .choice { margin: 5px; padding: 10px 20px; font-size: 1rem; cursor: pointer; }
+    #log { margin-top: 20px; height: 100px; overflow-y: auto; }
+    #map-grid { display: grid; grid-template-columns: repeat(5, 40px); gap: 5px; justify-content: center; margin: 20px auto; }
+    .cell { width: 40px; height: 40px; background: #444; border: 1px solid #888; display: flex; align-items: center; justify-content: center; }
+    .player { background: lime; }
+    .goal { background: gold; }
+  </style>
+</head>
+<body>
+  <h1>ダンジョン学習RPG：算数の冒険</h1>
+
+  <div id="map">
+    <h2>ダンジョンマップ</h2>
+    <div id="map-grid"></div>
+    <div><button onclick="movePlayer('up')">↑</button></div>
+    <div>
+      <button onclick="movePlayer('left')">←</button>
+      <button onclick="movePlayer('down')">↓</button>
+      <button onclick="movePlayer('right')">→</button>
+    </div>
+  </div>
+
+  <div id="battle">
+    <div class="entity">勇者 HP: <span id="player-hp">100</span> / ATK: <span id="player-atk">10</span></div>
+    <div class="entity">スライム HP: <span id="monster-hp">30</span></div>
+
+    <div id="question">問題を読み込み中...</div>
+    <div id="choices"></div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const player = { hp: 100, atk: 10 };
+    let monster = { hp: 30 };
+    let m_killed_flag = true;
+
+    const mapSize = 5;
+    let playerPos = { x: 0, y: 0 };
+    const goalPos = { x: 4, y: 4 };
+    const powerUpCells = [
+      { x: 2, y: 1 },
+      { x: 2, y: 3 }
+    ];
+
+    const questions = [
+      { q: "5 + 3 = ?", a: "8", choices: ["7", "8", "9"] },
+      { q: "9 - 4 = ?", a: "5", choices: ["5", "6", "4"] },
+      { q: "3 x 2 = ?", a: "6", choices: ["5", "6", "7"] },
+      { q: "12 / 4 = ?", a: "3", choices: ["2", "3", "4"] }
+    ];
+
+    function renderMap() {
+      const grid = document.getElementById("map-grid");
+      grid.innerHTML = "";
+      for (let y = 0; y < mapSize; y++) {
+        for (let x = 0; x < mapSize; x++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if (x === playerPos.x && y === playerPos.y) {
+            cell.classList.add("player");
+          } else if (x === goalPos.x && y === goalPos.y) {
+            cell.classList.add("goal");
+          } else if (powerUpCells.some(p => p.x === x && p.y === y)) {
+            cell.style.background = 'deepskyblue';
+          }
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function movePlayer(dir) {
+      if (!m_killed_flag) {
+        document.getElementById("log").innerHTML += `<div>まずは敵を倒そう！</div>`;
+        return;
+      }
+
+      if (dir === 'up' && playerPos.y > 0) playerPos.y--;
+      if (dir === 'down' && playerPos.y < mapSize - 1) playerPos.y++;
+      if (dir === 'left' && playerPos.x > 0) playerPos.x--;
+      if (dir === 'right' && playerPos.x < mapSize - 1) playerPos.x++;
+
+      const onPowerUp = powerUpCells.find(p => p.x === playerPos.x && p.y === playerPos.y);
+      if (onPowerUp) {
+        player.atk += 10;
+        document.getElementById("log").innerHTML += `<div>強化マスだ！攻撃力が${player.atk}になった！</div>`;
+        powerUpCells.splice(powerUpCells.indexOf(onPowerUp), 1);
+      }
+
+      renderMap();
+      startBattle();
+
+      if (playerPos.x === goalPos.x && playerPos.y === goalPos.y) {
+        document.getElementById("log").innerHTML += `<div>ダンジョンをクリアした！おめでとう！</div>`;
+        disableChoices();
+      }
+    }
+
+    function startBattle() {
+      monster.hp = 30;
+      m_killed_flag = false;
+      updateStatus();
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const q = questions[Math.floor(Math.random() * questions.length)];
+      document.getElementById("question").textContent = q.q;
+
+      const choicesDiv = document.getElementById("choices");
+      choicesDiv.innerHTML = "";
+
+      q.choices.forEach(choice => {
+        const btn = document.createElement("button");
+        btn.textContent = choice;
+        btn.className = "choice";
+        btn.onclick = () => handleAnswer(choice === q.a);
+        choicesDiv.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(correct) {
+      const log = document.getElementById("log");
+      if (correct) {
+        monster.hp -= player.atk;
+        log.innerHTML += `<div>正解！スライムに${player.atk}ダメージ！</div>`;
+      } else {
+        player.hp -= 10;
+        log.innerHTML += `<div>不正解！勇者が10ダメージ！</div>`;
+      }
+      updateStatus();
+
+      if (monster.hp <= 0) {
+        log.innerHTML += `<div>スライムを倒した！移動可能になった！</div>`;
+        m_killed_flag = true;
+        disableChoices();
+      } else if (player.hp <= 0) {
+        log.innerHTML += `<div>勇者は倒れてしまった... ゲームオーバー！</div>`;
+        disableChoices();
+        return;
+      }
+
+      if (!m_killed_flag) showQuestion();
+    }
+
+    function updateStatus() {
+      document.getElementById("player-hp").textContent = player.hp;
+      document.getElementById("monster-hp").textContent = monster.hp;
+      document.getElementById("player-atk").textContent = player.atk;
+    }
+
+    function disableChoices() {
+      const buttons = document.querySelectorAll(".choice");
+      buttons.forEach(btn => btn.disabled = true);
+    }
+
+    renderMap();
+    startBattle();
+  </script>
+</body>
+</html>
