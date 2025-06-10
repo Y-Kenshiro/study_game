@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ダンジョン学習RPG（算数）</title>
+  <style>
+    body { font-family: sans-serif; background: #222; color: #fff; text-align: center; }
+    #battle { margin-top: 50px; }
+    .entity { margin: 10px 0; font-size: 1.2rem; }
+    .choice { margin: 5px; padding: 10px 20px; font-size: 1rem; cursor: pointer; }
+    #log { margin-top: 20px; height: 100px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>ダンジョン学習RPG：算数の冒険</h1>
+  <div id="battle">
+    <div class="entity">勇者 HP: <span id="player-hp">100</span></div>
+    <div class="entity">スライム HP: <span id="monster-hp">30</span></div>
+
+    <div id="question">問題を読み込み中...</div>
+    <div id="choices"></div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const player = { hp: 100 };
+    let monster = { hp: 30 };
+
+    const questions = [
+      { q: "5 + 3 = ?", a: "8", choices: ["7", "8", "9"] },
+      { q: "9 - 4 = ?", a: "5", choices: ["5", "6", "4"] },
+      { q: "3 x 2 = ?", a: "6", choices: ["5", "6", "7"] },
+      { q: "12 / 4 = ?", a: "3", choices: ["2", "3", "4"] }
+    ];
+
+    function showQuestion() {
+      const q = questions[Math.floor(Math.random() * questions.length)];
+      document.getElementById("question").textContent = q.q;
+
+      const choicesDiv = document.getElementById("choices");
+      choicesDiv.innerHTML = "";
+
+      q.choices.forEach(choice => {
+        const btn = document.createElement("button");
+        btn.textContent = choice;
+        btn.className = "choice";
+        btn.onclick = () => handleAnswer(choice === q.a);
+        choicesDiv.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(correct) {
+      const log = document.getElementById("log");
+      if (correct) {
+        monster.hp -= 10;
+        log.innerHTML += `<div>正解！スライムに10ダメージ！</div>`;
+      } else {
+        player.hp -= 10;
+        log.innerHTML += `<div>不正解！勇者が10ダメージ！</div>`;
+      }
+      updateStatus();
+
+      if (monster.hp <= 0) {
+        log.innerHTML += `<div>スライムを倒した！次の敵が現れた！</div>`;
+        monster.hp = 30; // 次の敵を用意
+      } else if (player.hp <= 0) {
+        log.innerHTML += `<div>勇者は倒れてしまった... ゲームオーバー！</div>`;
+        disableChoices();
+        return;
+      }
+      showQuestion();
+    }
+
+    function updateStatus() {
+      document.getElementById("player-hp").textContent = player.hp;
+      document.getElementById("monster-hp").textContent = monster.hp;
+    }
+
+    function disableChoices() {
+      const buttons = document.querySelectorAll(".choice");
+      buttons.forEach(btn => btn.disabled = true);
+    }
+
+    showQuestion();
+  </script>
+</body>
+</html>
