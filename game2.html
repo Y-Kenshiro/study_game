@@ -18,6 +18,13 @@
 <body>
   <h1>ダンジョン学習RPG：算数の冒険</h1>
 
+  <div id="explain">
+    緑は現在地<br>
+    青は強化マス<br>
+    黄色はゴールだ！！<br>
+    問題に答えてゴールを目指そう！
+  </div>
+
   <div id="map">
     <h2>ダンジョンマップ</h2>
     <div id="map-grid"></div>
@@ -51,12 +58,7 @@
       { x: 2, y: 3 }
     ];
 
-    const questions = [
-      { q: "5 + 3 = ?", a: "8", choices: ["7", "8", "9"] },
-      { q: "9 - 4 = ?", a: "5", choices: ["5", "6", "4"] },
-      { q: "3 x 2 = ?", a: "6", choices: ["5", "6", "7"] },
-      { q: "12 / 4 = ?", a: "3", choices: ["2", "3", "4"] }
-    ];
+
 
     function renderMap() {
       const grid = document.getElementById("map-grid");
@@ -79,7 +81,7 @@
 
     function movePlayer(dir) {
       if (!m_killed_flag) {
-        document.getElementById("log").innerHTML += `<div>まずは敵を倒そう！</div>`;
+        document.getElementById("log").innerHTML = `<div>まずは敵を倒そう！</div>`;
         return;
       }
 
@@ -91,15 +93,17 @@
       const onPowerUp = powerUpCells.find(p => p.x === playerPos.x && p.y === playerPos.y);
       if (onPowerUp) {
         player.atk += 10;
-        document.getElementById("log").innerHTML += `<div>強化マスだ！攻撃力が${player.atk}になった！</div>`;
+        document.getElementById("log").innerHTML = `<div>強化マスだ！攻撃力が${player.atk}になった！</div>`;
         powerUpCells.splice(powerUpCells.indexOf(onPowerUp), 1);
+        renderMap();
+        return;
       }
 
       renderMap();
       startBattle();
 
       if (playerPos.x === goalPos.x && playerPos.y === goalPos.y) {
-        document.getElementById("log").innerHTML += `<div>ダンジョンをクリアした！おめでとう！</div>`;
+        document.getElementById("log").innerHTML = `<div>ダンジョンをクリアした！おめでとう！</div>`;
         disableChoices();
       }
     }
@@ -107,12 +111,56 @@
     function startBattle() {
       monster.hp = 30;
       m_killed_flag = false;
+      document.getElementById("log").innerHTML = `<div>スライムが現れた！</div>`
       updateStatus();
       showQuestion();
     }
+    
+    function generateMathQuestion() {
+      const op = ["+", "-", "×", "÷"][Math.floor(Math.random() * 4)];
+      let a, b, correct;
+
+      switch (op) {
+        case "+":
+          a = Math.floor(Math.random() * 100) + 1;
+          b = Math.floor(Math.random() * 100) + 1;
+          correct = a + b;
+          break;
+        case "-":
+          a = Math.floor(Math.random() * 100) + 1;
+          b = Math.floor(Math.random() * a); // マイナスにならないように
+          correct = a - b;
+          break;
+        case "×":
+          a = Math.floor(Math.random() * 100) + 1;
+          b = Math.floor(Math.random() * 10) + 1;
+          correct = a * b;
+          break;
+        case "÷":
+          b = Math.floor(Math.random() * 10) + 1;
+          correct = Math.floor(Math.random() * 99) + 1;
+          a = b * correct; // 割り切れるようにする
+          break;
+      }
+
+      const choices = new Set([correct]);
+      while (choices.size < 3) {
+        let delta = Math.floor(Math.random() * 5) + 1;
+        let wrong = correct + (Math.random() < 0.5 ? -delta : delta);
+        if (wrong >= 0) choices.add(wrong);
+      }
+
+      return {
+        q: `${a} ${op} ${b} = ?`,
+        a: String(correct),
+        choices: Array.from(choices).sort(() => Math.random() - 0.5)
+      };
+    }
+
+
 
     function showQuestion() {
-      const q = questions[Math.floor(Math.random() * questions.length)];
+      const q = generateMathQuestion(); // 自動生成された問題を取得
       document.getElementById("question").textContent = q.q;
 
       const choicesDiv = document.getElementById("choices");
@@ -122,7 +170,7 @@
         const btn = document.createElement("button");
         btn.textContent = choice;
         btn.className = "choice";
-        btn.onclick = () => handleAnswer(choice === q.a);
+        btn.onclick = () => handleAnswer(choice == q.a);
         choicesDiv.appendChild(btn);
       });
     }
@@ -131,19 +179,20 @@
       const log = document.getElementById("log");
       if (correct) {
         monster.hp -= player.atk;
-        log.innerHTML += `<div>正解！スライムに${player.atk}ダメージ！</div>`;
+        if(monster.hp < 0)monster.hp = 0;
+        log.innerHTML = `<div>正解！スライムに${player.atk}ダメージ！</div>`;
       } else {
         player.hp -= 10;
-        log.innerHTML += `<div>不正解！勇者が10ダメージ！</div>`;
+        log.innerHTML = `<div>不正解！勇者が10ダメージ！</div>`;
       }
       updateStatus();
 
       if (monster.hp <= 0) {
-        log.innerHTML += `<div>スライムを倒した！移動可能になった！</div>`;
+        log.innerHTML = `<div>スライムを倒した！移動可能になった！</div>`;
         m_killed_flag = true;
         disableChoices();
       } else if (player.hp <= 0) {
-        log.innerHTML += `<div>勇者は倒れてしまった... ゲームオーバー！</div>`;
+        log.innerHTML = `<div>勇者は倒れてしまった... ゲームオーバー！</div>`;
         disableChoices();
         return;
       }
